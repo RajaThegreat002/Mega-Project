@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar System</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Audiowide&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .space {
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle, rgba(0, 0, 30, 1) 0%, rgba(0, 0, 0, 1) 100%);
+            position: absolute;
+            overflow: hidden;
+        }
+
+        .star {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background-color: white;
+            border-radius: 50%;
+            animation: moveStars 60s linear infinite;
+        }
+
+        @keyframes moveStars {
+            0% {
+                transform: translateY(0);
+            }
+            100% {
+                transform: translateY(100vh);
+            }
+        }
+
+        #message {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            font-size: 30px;
+            font-weight: 700;
+            font-family: Audiowide;
+            transform: translate(-50%, -50%);
+            background-color: #111010;
+            color: #e4d7d7;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #message.visible {
+            opacity: 1;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            color: white;
+        }
+
+        .speed-display {
+            margin-left: 10px;
+            font-size: 18px;
+        }
+
+        .time {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            border-radius: 50%;
+            background-color: rgb(49, 47, 47);
+            color: white;
+            position: relative;
+            top: 90vh;
+            left: 45vw;
+        }
+
+        #timeDisplay {
+            width: 37px;
+            height: 37px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            background-color: rgb(212, 221, 221);
+            font-family: Audiowide;
+            font-weight: 800;
+            color: black;
+        }
+
+        /* Planet and Orbit styles remain unchanged */
+        /* Animation keyframes */
+        @keyframes spin-right {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes solar {
+            100% {
+                box-shadow: 0px 0px 500px orange;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="space">
+        <!-- Moving stars in background -->
+        <div class="star" style="left: 10%; animation-duration: 60s;"></div>
+        <div class="star" style="left: 50%; animation-duration: 90s;"></div>
+        <div class="star" style="left: 80%; animation-duration: 120s;"></div>
+
+        <div id="message">
+            <p>Click on Celestial object to get info about them</p>
+        </div>
+
+        <div class="controls">
+            <label for="speedSlider">Rotation Speed:</label>
+            <input type="range" id="speedSlider" min="1" max="20" value="1">
+            <span class="speed-display" id="speedDisplay">1x</span>
+            <button id="pauseBtn">Pause</button>
+            <button id="resumeBtn">Resume</button>
+            <button id="resetBtn">Reset</button>
+        </div>
+
+        <div class="time">
+            <div id="timeDisplay">0</div>
+            <div class="text">
+                <p>Days on</p>
+                <p>Earth</p>
+            </div>
+        </div>
+
+        <div class="sun" onclick="openPlanetPage('sun.html')"></div>
+
+        <!-- Planets and their orbits, add click events -->
+        <div class="circle1 mercury-orbit" onclick="openPlanetPage('mercury.html')">
+            <div class="mercury"></div>
+        </div>
+        <div class="circle2 venus-orbit" onclick="openPlanetPage('venus.html')">
+            <div class="venus"></div>
+        </div>
+        <div class="circle3 earth-orbit" onclick="openPlanetPage('earth.html')">
+            <div class="earth"></div>
+            <div class="earth-orbit2">
+                <div class="moon"></div>
+            </div>
+        </div>
+        <!-- More planet HTML as needed... -->
+    </div>
+
+    <script>
+        let speedFactor = 1;
+        let isPaused = false;
+        let startTime = new Date().getTime();
+
+        // Time Display update function
+        function updateDisplayTime() {
+            const currentTime = new Date().getTime();
+            const elapsedSeconds = Math.floor((currentTime - startTime) / 1000) * speedFactor;
+            document.getElementById('timeDisplay').innerText = Math.floor(elapsedSeconds / 86400); // display Earth days
+        }
+
+        // Adjust speed
+        const speedSlider = document.getElementById('speedSlider');
+        speedSlider.addEventListener('input', () => {
+            speedFactor = speedSlider.value;
+            document.getElementById('speedDisplay').innerText = `${speedFactor}x`;
+        });
+
+        // Pause/Resume functionality
+        document.getElementById('pauseBtn').addEventListener('click', () => {
+            isPaused = true;
+            document.querySelectorAll('.sun, .mercury-orbit, .venus-orbit, .earth-orbit').forEach(el => {
+                el.style.animationPlayState = 'paused';
+            });
+        });
+
+        document.getElementById('resumeBtn').addEventListener('click', () => {
+            isPaused = false;
+            document.querySelectorAll('.sun, .mercury-orbit, .venus-orbit, .earth-orbit').forEach(el => {
+                el.style.animationPlayState = 'running';
+            });
+        });
+
+        // Reset button
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            speedSlider.value = 1;
+            speedFactor = 1;
+            document.getElementById('speedDisplay').innerText = '1x';
+            startTime = new Date().getTime();
+            document.getElementById('timeDisplay').innerText = '0';
+            document.querySelectorAll('.sun, .mercury-orbit, .venus-orbit, .earth-orbit').forEach(el => {
+                el.style.animation = ''; // Reset animation
+                void el.offsetWidth; // Force reflow to restart animation
+                el.style.animation = 'spin-right infinite linear';
+            });
+        });
+
+        // Time Update Loop
+        setInterval(updateDisplayTime, 1000);
+
+        // Planet Click Event
+        function openPlanetPage(planetPage) {
+            window.location.href = planetPage;
+        }
+    </script>
+</body>
+
+</html>

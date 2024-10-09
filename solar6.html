@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar System with Star Transition</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+            font-family: 'Arial', sans-serif;
+        }
+
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .transition-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="solarSystemCanvas"></canvas>
+
+    <div id="transitionOverlay" class="transition-overlay"></div>
+
+    <script>
+        const canvas = document.getElementById('solarSystemCanvas');
+        const ctx = canvas.getContext('2d');
+        const transitionOverlay = document.getElementById('transitionOverlay');
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+
+        const planets = [
+            { name: 'Sun', radius: 30, orbitRadius: 0, orbitSpeed: 0, color: '#f5c242', link: 'sun.html' },
+            { name: 'Mercury', radius: 5, orbitRadius: 60, orbitSpeed: 4.15, color: '#9e9e9e', link: 'mercury.html' },
+            { name: 'Venus', radius: 9, orbitRadius: 90, orbitSpeed: 1.62, color: '#d1a354', link: 'venus.html' },
+            { name: 'Earth', radius: 10, orbitRadius: 120, orbitSpeed: 1, color: '#4b81f4', link: 'earth.html' },
+            { name: 'Mars', radius: 8, orbitRadius: 160, orbitSpeed: 0.53, color: '#db4d3f', link: 'mars.html' },
+            { name: 'Jupiter', radius: 20, orbitRadius: 220, orbitSpeed: 0.08, color: '#f2b43f', link: 'jupiter.html' },
+            { name: 'Saturn', radius: 18, orbitRadius: 280, orbitSpeed: 0.03, color: '#e0b85e', link: 'saturn.html' },
+            { name: 'Uranus', radius: 15, orbitRadius: 340, orbitSpeed: 0.01, color: '#68d2e6', link: 'uranus.html' },
+            { name: 'Neptune', radius: 14, orbitRadius: 400, orbitSpeed: 0.006, color: '#4561c3', link: 'neptune.html' }
+        ];
+
+        let time = 0;
+        let paused = false;
+        let speedMultiplier = 1;
+        const stars = [];
+
+        // Create random stars for background
+        function generateStars() {
+            for (let i = 0; i < 200; i++) {
+                stars.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    size: Math.random() * 0.3 + 0.1,  // Smaller stars: range from 0.1 to 0.4
+                    brightness: Math.random() * 0.5 + 0.5
+                });
+            }
+        }
+
+        generateStars();
+
+        // Resize canvas on window resize
+        window.addEventListener('resize', () => {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            stars.length = 0; // Clear stars
+            generateStars(); // Re-generate stars to fit new size
+        });
+
+        // Function to draw the stars in the background
+        function drawStars(speed = 1) {
+            stars.forEach(star => {
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, 2 * Math.PI);
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.brightness})`;
+                ctx.fill();
+
+                // Move stars quickly during transition
+                star.x += speed;
+                if (star.x > width) {
+                    star.x = 0; // Loop stars around
+                }
+            });
+        }
+
+        // Function to draw the solar system
+        function drawSolarSystem() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw stars background
+            drawStars();
+
+            // Draw Sun and planets
+            planets.forEach(planet => {
+                const angle = (time * planet.orbitSpeed * speedMultiplier) % (2 * Math.PI);
+                const x = width / 2 + Math.cos(angle) * planet.orbitRadius;
+                const y = height / 2 + Math.sin(angle) * planet.orbitRadius;
+
+                // Draw planet orbit
+                if (planet.orbitRadius > 0) {
+                    ctx.beginPath();
+                    ctx.arc(width / 2, height / 2, planet.orbitRadius, 0, 2 * Math.PI);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.stroke();
+                }
+
+                // Draw planet
+                ctx.beginPath();
+                ctx.arc(x, y, planet.radius, 0, 2 * Math.PI);
+                ctx.fillStyle = planet.color;
+                ctx.fill();
+
+                // Check if planet is clicked
+                canvas.addEventListener('click', (event) => {
+                    const distance = Math.hypot(event.clientX - x, event.clientY - y);
+                    if (distance < planet.radius) {
+                        triggerStarTransition(planet.link);
+                    }
+                });
+            });
+
+            if (!paused) {
+                time += 0.02;
+            }
+
+            requestAnimationFrame(drawSolarSystem);
+        }
+
+        // Trigger the star transition effect
+        function triggerStarTransition(link) {
+            transitionOverlay.style.opacity = '1'; // Show transition overlay
+            setTimeout(() => {
+                drawStars(10); // Speed up stars
+                window.location.href = link; // Redirect to new page after transition
+            }, 1000); // Wait 1 second for the transition effect
+        }
+
+        // Start drawing
+        drawSolarSystem();
+    </script>
+</body>
+</html>

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar System with Star Transition</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+            font-family: 'Arial', sans-serif;
+        }
+
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .transition-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        button {
+            margin-left: 20px;
+            padding: 10px;
+            background-color: rgb(0, 153, 255);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: box-shadow 0.3s ease;
+        }
+
+        button:hover {
+            box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.6);
+            /* Snow color box shadow */
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+        }
+
+        #resetButton {
+            background-color: rgb(0, 183, 255);
+            /* Reset button color */
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="solarSystemCanvas"></canvas>
+
+    <div id="transitionOverlay" class="transition-overlay"></div>
+
+    <div class="controls">
+        <label for="speedControl" style="color: white;">Speed: </label>
+        <input type="range" id="speedControl" min="1" max="5" step="0.5" value="1" style="width: 200px;">
+        <span id="speedValue">1x</span>
+        <button id="pauseButton">Pause</button>
+        <button id="resetButton">Reset</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('solarSystemCanvas');
+        const ctx = canvas.getContext('2d');
+        const transitionOverlay = document.getElementById('transitionOverlay');
+        const pauseButton = document.getElementById('pauseButton');
+        const resetButton = document.getElementById('resetButton');
+        const speedControl = document.getElementById('speedControl');
+        const speedValue = document.getElementById('speedValue');
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+
+        // Image paths for planets and Sun
+        const sunImg = new Image();
+        sunImg.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/sun.png';
+
+        const planetImages = {
+            Mercury: new Image(),
+            Venus: new Image(),
+            Earth: new Image(),
+            Mars: new Image(),
+            Jupiter: new Image(),
+            Saturn: new Image(),
+            Uranus: new Image(),
+            Neptune: new Image()
+        };
+
+        // Set image paths for each planet
+        planetImages.Mercury.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/mercury.png';
+        planetImages.Venus.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/venus.png';
+        planetImages.Earth.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/earth.png';
+        planetImages.Mars.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/mars.png';
+        planetImages.Jupiter.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/jupiter.png';
+        planetImages.Saturn.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/saturn.png';
+        planetImages.Uranus.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/uranus.png';
+        planetImages.Neptune.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/neptune.png';
+
+        const planets = [
+            { name: 'Sun', radius: 30, orbitRadius: 0, orbitSpeed: 0, link: 'sun.html' },
+            { name: 'Mercury', radius: 5, orbitRadius: 60, orbitSpeed: 4.15, color: '#9e9e9e', link: 'mercury.html', img: planetImages.Mercury },
+            { name: 'Venus', radius: 9, orbitRadius: 90, orbitSpeed: 1.62, color: '#d1a354', link: 'venus.html', img: planetImages.Venus },
+            { name: 'Earth', radius: 10, orbitRadius: 120, orbitSpeed: 1, color: '#4b81f4', link: 'earth.html', img: planetImages.Earth },
+            { name: 'Mars', radius: 8, orbitRadius: 160, orbitSpeed: 0.53, color: '#db4d3f', link: 'mars.html', img: planetImages.Mars },
+            { name: 'Jupiter', radius: 20, orbitRadius: 220, orbitSpeed: 0.08, color: '#f2b43f', link: 'jupiter.html', img: planetImages.Jupiter },
+            { name: 'Saturn', radius: 18, orbitRadius: 280, orbitSpeed: 0.03, color: '#e0b85e', link: 'saturn.html', img: planetImages.Saturn },
+            { name: 'Uranus', radius: 15, orbitRadius: 340, orbitSpeed: 0.01, color: '#68d2e6', link: 'uranus.html', img: planetImages.Uranus },
+            { name: 'Neptune', radius: 14, orbitRadius: 400, orbitSpeed: 0.006, color: '#4561c3', link: 'neptune.html', img: planetImages.Neptune }
+        ];
+
+        let time = 0;
+        let paused = false;
+        let speedMultiplier = 1;
+        const stars = [];
+
+        function generateStars() {
+            for (let i = 0; i < 200; i++) {
+                stars.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    size: Math.random() * 0.3 + 0.1,
+                    brightness: Math.random() * 0.5 + 0.5
+                });
+            }
+        }
+
+        generateStars();
+
+        window.addEventListener('resize', () => {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            stars.length = 0;
+            generateStars();
+        });
+
+        function drawStars(speed = 1) {
+            stars.forEach(star => {
+                // Adjust brightness to be up to 3x when moving
+                const adjustedBrightness = Math.min(star.brightness * 3, 1); // Limit brightness to 1
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, 2 * Math.PI);
+                ctx.fillStyle = `rgba(255, 255, 255, ${adjustedBrightness})`;
+                ctx.fill();
+
+                star.x += speed;
+                if (star.x > width) {
+                    star.x = 0;
+                }
+            });
+        }
+
+        function drawSolarSystem() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawStars();
+
+            // Draw Sun as an image
+            const sunX = width / 2 - 50; // Center the Sun image
+            const sunY = height / 2 - 50;
+            ctx.drawImage(sunImg, sunX, sunY, 100, 100); // Sun image (100x100 size)
+
+            planets.forEach(planet => {
+                const angle = (time * planet.orbitSpeed * speedMultiplier) % (2 * Math.PI);
+                const x = width / 2 + Math.cos(angle) * planet.orbitRadius;
+                const y = height / 2 + Math.sin(angle) * planet.orbitRadius;
+
+                if (planet.orbitRadius > 0) {
+                    ctx.beginPath();
+                    ctx.arc(width / 2, height / 2, planet.orbitRadius, 0, 2 * Math.PI);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.stroke();
+
+                    ctx.drawImage(planet.img, x - planet.radius, y - planet.radius, planet.radius * 2, planet.radius * 2);
+                }
+
+                ctx.beginPath();
+                ctx.arc(x, y, planet.radius, 0, 2 * Math.PI);
+                ctx.fillStyle = planet.color;
+                ctx.fill();
+
+                canvas.addEventListener('click', (event) => {
+                    const distance = Math.hypot(event.clientX - x, event.clientY - y);
+                    if (distance < planet.radius) {
+                        triggerStarTransition(planet.link);
+                    }
+                });
+            });
+
+            if (!paused) {
+                time += 0.02;
+            }
+
+            requestAnimationFrame(drawSolarSystem);
+        }
+
+        function triggerStarTransition(link) {
+            transitionOverlay.style.opacity = '1';
+            setTimeout(() => {
+                drawStars(10);
+                window.location.href = link;
+            }, 1000);
+        }
+
+        function resetSolarSystem() {
+            time = 0;
+            paused = false;
+            speedMultiplier = 1;
+            speedControl.value = 1;
+            speedValue.textContent = '1x';
+        }
+
+        drawSolarSystem();
+
+        speedControl.addEventListener('input', () => {
+            speedMultiplier = parseFloat(speedControl.value);
+            speedValue.textContent = `${speedMultiplier}x`;
+        });
+
+        pauseButton.addEventListener('click', () => {
+            paused = !paused;
+            pauseButton.textContent = paused ? 'Resume' : 'Pause';
+        });
+
+        resetButton.addEventListener('click', () => {
+            resetSolarSystem();
+        });
+    </script>
+</body>
+
+</html>

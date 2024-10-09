@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar System with Star Transition</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Audiowide&display=swap');
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+            font-family: 'poppins', sans-serif;
+            /* cursor: pointer; */
+        }
+
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .transition-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        button {
+            margin-left: 20px;
+            padding: 10px;
+            background-color: rgb(0, 153, 255);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: box-shadow 0.3s ease;
+        }
+
+        button:hover {
+            box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.6);
+            /* Snow color box shadow */
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Audiowide;
+        }
+
+        #resetButton {
+            background-color: rgb(0, 183, 255);
+            /* Reset button color */
+        }
+
+        .planet {
+            transform: scale(1.5);
+            box-shadow: white 1px ;
+            transition: transform s, box-shadow 1s;
+            cursor: pointer;
+        }
+        #message {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            font-size: 30px;
+            font-weight: 700;
+            font-family: Audiowide;
+            transform: translate(-50%, -50%);
+            background-color: #111010;
+            color: #e4d7d7;
+            padding: 10px 20px;
+            /* border: 1px solid #ccc; */
+            border-radius: 5px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        #message.visible {
+            opacity: 0.8;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="solarSystemCanvas"></canvas>
+    <div id="message">
+        <p>Click on Celestial object to get info about them</p>
+    </div>
+
+    <div id="transitionOverlay" class="transition-overlay"></div>
+
+    <div class="controls">
+        <label for="speedControl" style="color: white;">Speed: </label>
+        <input type="range" id="speedControl" min="1" max="5" step="0.5" value="1" style="width: 200px;">
+        <span id="speedValue">1x</span>
+        <button id="pauseButton">Pause</button>
+        <button id="resetButton">Reset</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('solarSystemCanvas');
+        const ctx = canvas.getContext('2d');
+        const transitionOverlay = document.getElementById('transitionOverlay');
+        const pauseButton = document.getElementById('pauseButton');
+        const resetButton = document.getElementById('resetButton');
+        const speedControl = document.getElementById('speedControl');
+        const speedValue = document.getElementById('speedValue');
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+
+        const planetImages = {
+            Sun: new Image(),
+            Mercury: new Image(),
+            Venus: new Image(),
+            Earth: new Image(),
+            Mars: new Image(),
+            Jupiter: new Image(),
+            Saturn: new Image(),
+            Uranus: new Image(),
+            Neptune: new Image()
+        };
+
+        // Set image paths for each planet
+        planetImages.Sun.src ='https://www.solarsystemscope.com/spacepedia/images/handbook/renders/sun.png';
+        planetImages.Mercury.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/mercury.png';
+        planetImages.Venus.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/venus.png';
+        planetImages.Earth.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/earth.png';
+        planetImages.Mars.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/mars.png';
+        planetImages.Jupiter.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/jupiter.png';
+        planetImages.Saturn.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/saturn.png';
+        planetImages.Uranus.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/uranus.png';
+        planetImages.Neptune.src = 'https://www.solarsystemscope.com/spacepedia/images/handbook/renders/neptune.png';
+
+        const planets = [
+            { name: 'Sun', radius: 40, orbitRadius: 0, orbitSpeed: 0, image: planetImages.Sun, link: 'sun.html' },
+            { name: 'Mercury', radius: 5, orbitRadius: 60, orbitSpeed: 4.15, image: planetImages.Mercury, link: 'mercury.html' },
+            { name: 'Venus', radius: 9, orbitRadius: 90, orbitSpeed: 1.62, image: planetImages.Venus, link: 'venus.html' },
+            { name: 'Earth', radius: 10, orbitRadius: 120, orbitSpeed: 1, image: planetImages.Earth, link: 'earth.html' },
+            { name: 'Mars', radius: 8, orbitRadius: 160, orbitSpeed: 0.53, image: planetImages.Mars, link: 'mars.html' },
+            { name: 'Jupiter', radius: 20, orbitRadius: 220, orbitSpeed: 0.08, image: planetImages.Jupiter, link: 'jupiter.html' },
+            { name: 'Saturn', radius: 18, orbitRadius: 280, orbitSpeed: 0.03, image: planetImages.Saturn, link: 'saturn.html' },
+            { name: 'Uranus', radius: 15, orbitRadius: 340, orbitSpeed: 0.01, image: planetImages.Uranus, link: 'uranus.html' },
+            { name: 'Neptune', radius: 14, orbitRadius: 400, orbitSpeed: 0.006, image: planetImages.Neptune, link: 'neptune.html' }
+        ];
+
+        let time = 0;
+        let paused = false;
+        let speedMultiplier = 1;
+        const stars = [];
+        let hoveredPlanet = null;
+
+        function loadPlanetImages() {
+            planets.forEach(planet => {
+                const img = new Image();
+                img.src = planetImages[planet.name];
+                img.onload = () => {
+                    planet.image = img;
+                };
+            });
+        }
+
+        loadPlanetImages();
+
+        function generateStars() {
+            for (let i = 0; i < 200; i++) {
+                stars.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    size: Math.random() * 0.3 + 0.1,
+                    brightness: Math.random() * 0.5 + 0.5
+                });
+            }
+        }
+
+        generateStars();
+
+        window.addEventListener('resize', () => {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            stars.length = 0;
+            generateStars();
+        });
+
+        canvas.addEventListener('mousemove', (event) => {
+            const mouseX = event.clientX;
+            const mouseY = event.clientY;
+            hoveredPlanet = null;
+
+            planets.forEach(planet => {
+                const angle = (time * planet.orbitSpeed * speedMultiplier) % (2 * Math.PI);
+                const x = width / 2 + Math.cos(angle) * planet.orbitRadius;
+                const y = height / 2 + Math.sin(angle) * planet.orbitRadius;
+                
+
+                const distance = Math.hypot(mouseX - x, mouseY - y);
+                if (distance < planet.radius * 1.2) { // Adjusted hover radius
+                    hoveredPlanet = planet;
+                }
+            });
+        });
+
+        function drawStars(speed = 1) {
+            stars.forEach(star => {
+                const adjustedBrightness = Math.min(star.brightness * 3, 1);
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, 2 * Math.PI);
+                ctx.fillStyle = `rgba(255, 255, 255, ${adjustedBrightness})`;
+                ctx.fill();
+
+                star.x += speed;
+                if (star.x > width) {
+                    star.x = 0;
+                }
+            });
+        }
+
+        function drawSolarSystem() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawStars();
+
+            planets.forEach(planet => {
+                const angle = (time * planet.orbitSpeed * speedMultiplier) % (2 * Math.PI);
+                const x = width / 2 + Math.cos(angle) * planet.orbitRadius;
+                const y = height / 2 + Math.sin(angle) * planet.orbitRadius;
+                
+
+                if (planet.orbitRadius > 0) {
+                    ctx.beginPath();
+                    ctx.arc(width / 2, height / 2, planet.orbitRadius, 0, 2 * Math.PI);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                    ctx.stroke();
+                }
+
+                let scale = 1;
+                let shadowBlur = 0;
+                let shadowColor = 'rgba(255, 255, 255, 0.5)';
+
+                if (planet === hoveredPlanet) {
+                    scale = 1.2;
+                    shadowBlur = 15;
+                }
+
+                if (planet.image) {
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.scale(scale, scale);
+                    ctx.drawImage(planet.image, -planet.radius, -planet.radius, planet.radius * 2, planet.radius * 2);
+                    ctx.shadowBlur = shadowBlur;
+                    ctx.shadowColor = shadowColor;
+                    ctx.restore();
+                } else {
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.scale(scale, scale);
+                    ctx.beginPath();
+                    ctx.arc(0, 0, planet.radius, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#ffffff'; // Fallback color while loading images
+                    ctx.fill();
+                    ctx.shadowBlur = shadowBlur;
+                    ctx.shadowColor = shadowColor;
+                    ctx.restore();
+                }
+
+                canvas.addEventListener('click', (event) => {
+                    if (planet === hoveredPlanet) {
+                        triggerStarTransition(planet.link);
+                    }
+                });
+            });
+
+            if (!paused) {
+                time += 0.02;
+            }
+
+            requestAnimationFrame(drawSolarSystem);
+        }
+
+        function triggerStarTransition(link) {
+            transitionOverlay.style.opacity = '1';
+            setTimeout(() => {
+                drawStars(10);
+                window.location.href = link;
+            }, 1000);
+        }
+
+        function resetSolarSystem() {
+            time = 0;
+            paused = false;
+            speedMultiplier = 1;
+            speedControl.value = 1;
+            speedValue.textContent = '1x';
+        }
+
+        drawSolarSystem();
+
+        speedControl.addEventListener('input', () => {
+            speedMultiplier = parseFloat(speedControl.value);
+            speedValue.textContent = `${speedMultiplier}x`;
+        });
+
+        pauseButton.addEventListener('click', () => {
+            paused = !paused;
+            pauseButton.textContent = paused ? 'Resume' : 'Pause';
+        });
+
+        resetButton.addEventListener('click', () => {
+            resetSolarSystem();
+        });
+        const message = document.getElementById('message');
+        setTimeout(() => {
+            message.classList.add('visible');
+
+            // Hide the message after 5 seconds
+            setTimeout(() => {
+                message.classList.remove('visible');
+                message.style.zIndex=-1
+            }, 5000);
+        }, 2000);
+    </script>
+</body>
+
+</html>

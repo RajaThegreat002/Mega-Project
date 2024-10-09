@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Solar System</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: black;
+            font-family: 'Arial', sans-serif;
+        }
+
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            color: white;
+            z-index: 10;
+        }
+
+        .slider,
+        .button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+
+        .slider input {
+            width: 200px;
+        }
+
+        .theme-text {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #00aaff;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        button:hover {
+            background-color: #0088cc;
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="solarSystemCanvas"></canvas>
+
+    <div class="controls">
+        <div class="slider">
+            <label for="speedSlider" class="theme-text">Speed: </label>
+            <input type="range" id="speedSlider" min="0.5" max="5" step="0.1" value="1">
+            <span id="speedValue">1x</span>
+        </div>
+        <button id="pauseResumeBtn">Pause</button>
+        <button id="resetBtn">Reset</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('solarSystemCanvas');
+        const ctx = canvas.getContext('2d');
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
+
+        const planets = [
+            { name: 'Sun', radius: 40, orbitRadius: 0, orbitSpeed: 0, imageUrl: 'https://www.solarsystemscope.com/textures/download/2k/sun.jpg', page: 'sun.html' },
+            { name: 'Mercury', radius: 8, orbitRadius: 70, orbitSpeed: 4.15, imageUrl: 'https://www.solarsystemscope.com/textures/download/2k/mercury.jpg', page: 'mercury.html' },
+            { name: 'Venus', radius: 12, orbitRadius: 110, orbitSpeed: 1.62, imageUrl: 'https://www.solarsystemscope.com/textures/download/2k/venus.jpg', page: 'venus.html' },
+            { name: 'Earth', radius: 14, orbitRadius: 150, orbitSpeed: 1, imageUrl: 'https://www.solarsystemscope.com/textures/download/2k/earth_daymap.jpg', page: 'earth.html' },
+            { name: 'Mars', radius: 10, orbitRadius: 200, orbitSpeed: 0.53, imageUrl: 'https://www.solarsystemscope.com/textures/download/2k/mars.jpg', page: 'mars.html' },
+            { name: 'Jupiter', radius: 25, orbitRadius: 280, orbitSpeed: 0.08, imageUrl: 'https://www.solarsystemscope.com/textures/download/2k/jupiter.jpg', page: 'jupiter.html' },
+            { name: 'Saturn', radius: 23, orbitRadius: 350, orbitSpeed: 0.03, imageUrl: 'https://www.solarsystemscope.com/textures/download/2k/saturn.jpg', page: 'saturn.html' },
+            { name: 'Uranus', radius: 20, orbitRadius: 420, orbitSpeed: 0.01, imageUrl: 'https://www.solarsystemscope.com/textures/download/2k/uranus.jpg', page: 'uranus.html' },
+            { name: 'Neptune', radius: 18, orbitRadius: 500, orbitSpeed: 0.006, imageUrl: 'https://www.solarsystemscope.com/textures/download/2k/neptune.jpg', page: 'neptune.html' }
+        ];
+
+        let time = 0;
+        let paused = false;
+        let speedMultiplier = 1;
+        let stars = [];
+
+        // Generate stars for background
+        function generateStars() {
+            for (let i = 0; i < 300; i++) {
+                stars.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    size: Math.random() * 0.5 + 0.5,
+                    brightness: Math.random() * 0.7 + 0.3
+                });
+            }
+        }
+
+        generateStars();
+
+        // Resize canvas on window resize
+        window.addEventListener('resize', () => {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            stars = []; // Clear stars and regenerate
+            generateStars();
+        });
+
+        // Draw stars in the background
+        function drawStars() {
+            stars.forEach(star => {
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, 2 * Math.PI);
+                ctx.fillStyle = `rgba(255, 255, 255, ${star.brightness})`;
+                ctx.fill();
+            });
+        }
+
+        // Draw planets and their orbits
+        function drawSolarSystem() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw stars
+            drawStars();
+
+            // Draw planets
+            planets.forEach(planet => {
+                const angle = (time * planet.orbitSpeed * speedMultiplier) % (2 * Math.PI);
+                const x = width / 2 + Math.cos(angle) * planet.orbitRadius;
+                const y = height / 2 + Math.sin(angle) * planet.orbitRadius;
+
+                // Draw orbit
+                if (planet.orbitRadius > 0) {
+                    ctx.beginPath();
+                    ctx.arc(width / 2, height / 2, planet.orbitRadius, 0, 2 * Math.PI);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                    ctx.stroke();
+                }
+
+                // Draw planet
+                const img = new Image();
+                img.src = planet.imageUrl;
+                img.onload = () => {
+                    ctx.drawImage(img, x - planet.radius, y - planet.radius, planet.radius * 2, planet.radius * 2);
+                };
+
+                // Add interaction (click event)
+                canvas.addEventListener('click', (event) => {
+                    const dx = event.clientX - x;
+                    const dy = event.clientY - y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance <= planet.radius) {
+                        triggerTransition(planet.page);
+                    }
+                });
+            });
+
+            if (!paused) {
+                time += 0.02;
+            }
+
+            requestAnimationFrame(drawSolarSystem);
+        }
+
+        // Trigger star zoom-out transition
+        function triggerTransition(page) {
+            let transitionTime = 500; // Adjust transition duration here
+
+            const transitionInterval = setInterval(() => {
+                stars.forEach(star => {
+                    star.x += (star.x - width / 2) * 0.05;
+                    star.y += (star.y - height / 2) * 0.05;
+                    star.size += 0.1;
+                });
+
+                transitionTime -= 16; // Reduce time in each frame
+
+                if (transitionTime <= 0) {
+                    clearInterval(transitionInterval);
+                    window.location.href = page; // Redirect to HTML page
+                }
+            }, 16); // Approx. 60 frames per second
+        }
+
+        // Start drawing
+        drawSolarSystem();
+
+        // Speed slider functionality
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+        speedSlider.addEventListener('input', () => {
+            speedMultiplier = speedSlider.value;
+            speedValue.textContent = `${speedMultiplier}x`;
+        });
+
+        // Pause/Resume functionality
+        const pauseResumeBtn = document.getElementById('pauseResumeBtn');
+        pauseResumeBtn.addEventListener('click', () => {
+            paused = !paused;
+            pauseResumeBtn.textContent = paused ? 'Resume' : 'Pause';
+        });
+
+        // Reset button functionality
+        const resetBtn = document.getElementById('reset
